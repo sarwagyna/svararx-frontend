@@ -19,8 +19,9 @@ const DashboardAnalyticsPanel = dynamic(
     ),
   }
 );
-import { getDashboard, getMe, prescriptionLink, type DashboardData, type RecentPrescription } from "@/lib/api";
+import { getDashboard, getMe, prescriptionLink, type DashboardData, type DoctorProfile, type RecentPrescription } from "@/lib/api";
 import { getActiveDoctorId } from "@/lib/clinic-session";
+import { getCached, swrLoad } from "@/lib/data-cache";
 
 function greeting() {
   const h = new Date().getHours();
@@ -137,27 +138,37 @@ function RecentRxCard({ rx }: { rx: RecentPrescription }) {
 }
 
 function DashboardContent() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData | null>(
+    () => getCached<DashboardData>("dashboard") ?? null
+  );
+  const [loading, setLoading] = useState(
+    () => getCached<DashboardData>("dashboard") === undefined
+  );
   const [error, setError] = useState<string | null>(null);
-  const [doctorName, setDoctorName] = useState<string | null>(null);
+  const [doctorName, setDoctorName] = useState<string | null>(
+    () => getCached<DoctorProfile>("me")?.name ?? null
+  );
   const [sessionDoctorId, setSessionDoctorId] = useState<string | null>(null);
 
   useEffect(() => {
     setSessionDoctorId(getActiveDoctorId());
-    // A valid token is already guaranteed by OnboardingGuard, and authFetch
-    // self-heals on 401 — so skip the extra exchangeToken round-trip and let
-    // these two calls run in parallel.
-    getMe()
-      .then((profile) => setDoctorName(profile.name))
-      .catch(() => {});
-
-    getDashboard()
-      .then(setData)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load dashboard.")
-      )
-      .finally(() => setLoading(false));
+    // Stale-while-revalidate: show cached data instantly and only hit the
+    // network when the cache is stale (skips the call entirely when fresh).
+    swrLoad("me", getMe, {
+      ttlMs: 120_000,
+      onData: (profile) => setDoctorName(profile.name),
+      onError: () => {},
+    });
+    swrLoad("dashboard", getDashboard, {
+      ttlMs: 20_000,
+      onData: (d) => {
+        setData(d);
+        setLoading(false);
+      },
+      onError: (err) =>
+        setError(err instanceof Error ? err.message : "Failed to load dashboard."),
+      onSettled: () => setLoading(false),
+    });
   }, []);
 
   return (

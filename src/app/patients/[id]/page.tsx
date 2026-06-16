@@ -14,6 +14,7 @@ import {
   type PatientAllergy,
   type VitalReading,
 } from "@/lib/api";
+import { swrLoad } from "@/lib/data-cache";
 import { AppShell } from "@/components/AppShell";
 import { PageContent } from "@/components/PageContent";
 import { OnboardingGuard } from "@/components/OnboardingGuard";
@@ -121,25 +122,33 @@ function PatientDetailContent() {
   );
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError(null);
-    try {
-      const [p, allergyList, latestVitals, history] = await Promise.all([
-        getPatient(patientId),
-        getPatientAllergies(patientId),
-        getPatientVitalsLatest(patientId).catch(() => null),
-        getPatientHistory(patientId, 1, 1),
-      ]);
-      setPatient(p);
-      setAllergies(allergyList);
-      setVitals(latestVitals);
-      setVisitTotal(history.total);
-      setLastVisitAt(history.items[0]?.created_at ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load patient.");
-    } finally {
-      setLoading(false);
-    }
+    // Stale-while-revalidate: show the cached patient instantly on revisit and
+    // only refetch when the cache is stale.
+    await swrLoad(
+      `patient:${patientId}`,
+      () =>
+        Promise.all([
+          getPatient(patientId),
+          getPatientAllergies(patientId),
+          getPatientVitalsLatest(patientId).catch(() => null),
+          getPatientHistory(patientId, 1, 1),
+        ]),
+      {
+        ttlMs: 20_000,
+        onData: ([p, allergyList, latestVitals, history]) => {
+          setPatient(p);
+          setAllergies(allergyList);
+          setVitals(latestVitals);
+          setVisitTotal(history.total);
+          setLastVisitAt(history.items[0]?.created_at ?? null);
+          setLoading(false);
+        },
+        onError: (err) =>
+          setError(err instanceof Error ? err.message : "Failed to load patient."),
+        onSettled: () => setLoading(false),
+      }
+    );
   }, [patientId]);
 
   useEffect(() => {

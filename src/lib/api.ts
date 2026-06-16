@@ -3,6 +3,7 @@
  * Protected endpoints use HS256 SvaraRx tokens (exchanged after Supabase login).
  */
 import { supabase } from "./supabase";
+import { invalidateCache } from "./data-cache";
 import {
   clearTokens,
   getStoredAccessToken,
@@ -1377,7 +1378,10 @@ export async function approvePrescription(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return handleResponse<ApproveResponse>(res);
+  const result = await handleResponse<ApproveResponse>(res);
+  invalidateCache("dashboard");
+  if (body.patient_id) invalidateCache(`patient:${body.patient_id}`);
+  return result;
 }
 
 export async function searchPatients(q: string, limit = 10): Promise<PatientSearchResult[]> {
@@ -1404,7 +1408,10 @@ export async function linkPrescriptionPatient(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ patient_id: patientId }),
   });
-  return handleResponse<PrescriptionDetail>(res);
+  const result = await handleResponse<PrescriptionDetail>(res);
+  invalidateCache("dashboard");
+  invalidateCache(`patient:${patientId}`);
+  return result;
 }
 
 export async function updatePatient(
@@ -1416,7 +1423,9 @@ export async function updatePatient(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return handleResponse<Patient>(res);
+  const result = await handleResponse<Patient>(res);
+  invalidateCache(`patient:${id}`);
+  return result;
 }
 
 export interface LetterheadSettings {
@@ -1479,7 +1488,9 @@ export async function addPatientAllergy(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return handleResponse<PatientAllergy>(res);
+  const result = await handleResponse<PatientAllergy>(res);
+  invalidateCache(`patient:${patientId}`);
+  return result;
 }
 
 export async function deletePatientAllergy(
@@ -1493,6 +1504,7 @@ export async function deletePatientAllergy(
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "Failed to remove allergy.");
   }
+  invalidateCache(`patient:${patientId}`);
 }
 
 export async function getPatientConditions(patientId: string): Promise<PatientCondition[]> {
@@ -1588,7 +1600,9 @@ export async function createPatient(data: PatientCreate): Promise<Patient> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return handleResponse<Patient>(res);
+  const result = await handleResponse<Patient>(res);
+  invalidateCache("dashboard");
+  return result;
 }
 
 export async function getDashboard(): Promise<DashboardData> {
@@ -1675,7 +1689,9 @@ export async function recordVitals(data: VitalCreate): Promise<VitalRecordRespon
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return handleResponse<VitalRecordResponse>(res);
+  const result = await handleResponse<VitalRecordResponse>(res);
+  invalidateCache(`patient:${data.patient_id}`);
+  return result;
 }
 
 export async function getPatientVitals(
