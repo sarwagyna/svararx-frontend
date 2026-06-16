@@ -2,7 +2,7 @@
 /**
  * VoiceCapture — push-to-talk UI: button, live waveform, upload, permission help.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { VoiceButton } from "@/components/VoiceButton";
@@ -30,6 +30,9 @@ export function VoiceCapture({
   className,
 }: VoiceCaptureProps) {
   const [toast, setToast] = useState<string | null>(null);
+  // Holds the in-flight "start consultation" task so the mic can activate
+  // immediately while it runs in parallel; awaited before upload.
+  const startTaskRef = useRef<Promise<void> | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -53,7 +56,9 @@ export function VoiceCapture({
   });
 
   const handleStart = useCallback(async () => {
-    await onStartRecording?.();
+    // Kick off consultation creation in parallel so mic activation isn't gated
+    // on a backend round-trip. (onStartRecording handles its own errors.)
+    startTaskRef.current = Promise.resolve(onStartRecording?.()).then(() => {});
     await startRecording();
   }, [startRecording, onStartRecording]);
 
@@ -66,6 +71,11 @@ export function VoiceCapture({
     }
 
     try {
+      // Ensure the parallel consultation-start finished before uploading.
+      if (startTaskRef.current) {
+        await startTaskRef.current;
+        startTaskRef.current = null;
+      }
       const capture = await captureVoice(blob);
       await onCaptured({
         blob,
