@@ -37,6 +37,18 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getSession();
 
   if (!session) {
+    // App Router prefetch (RSC) requests fire on link hover/viewport and can
+    // race with Supabase token refresh. Redirecting them surfaces as
+    // "Fetch failed loading" in the console and breaks prefetch. Let prefetches
+    // through — real navigations still redirect, and client guards enforce auth.
+    const isPrefetch =
+      request.headers.get("next-router-prefetch") === "1" ||
+      request.headers.get("purpose") === "prefetch" ||
+      request.headers.get("sec-purpose")?.includes("prefetch") === true;
+    if (isPrefetch) {
+      return response;
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
