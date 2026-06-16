@@ -14,10 +14,25 @@ const DOCTOR_SESSION_KEY = "svararx_doctor_session";
 const CLINIC_ACCESS_KEY = "svararx_clinic_access_token";
 const CLINIC_REFRESH_KEY = "svararx_clinic_refresh_token";
 const ONBOARDING_DONE_KEY = "svararx_onboarding_complete";
+const ONBOARDING_TS_KEY = "svararx_onboarding_complete_ts";
+const CLINIC_CTX_TS_KEY = "svararx_clinic_ux_context_ts";
+
+// How long cached bootstrap data (onboarding status, clinic context) is trusted
+// without revalidating. During this window, guards skip the network entirely.
+export const BOOTSTRAP_TTL_MS = 5 * 60 * 1000;
+
+function _isFresh(tsKey: string, ttlMs: number): boolean {
+  if (typeof window === "undefined") return false;
+  const raw = sessionStorage.getItem(tsKey);
+  if (!raw) return false;
+  const ts = Number(raw);
+  return Number.isFinite(ts) && Date.now() - ts < ttlMs;
+}
 
 export function cacheOnboardingComplete(done: boolean): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(ONBOARDING_DONE_KEY, done ? "1" : "0");
+  sessionStorage.setItem(ONBOARDING_TS_KEY, String(Date.now()));
 }
 
 export function getCachedOnboardingComplete(): boolean | null {
@@ -26,9 +41,14 @@ export function getCachedOnboardingComplete(): boolean | null {
   return v === null ? null : v === "1";
 }
 
+export function isOnboardingStatusFresh(ttlMs: number = BOOTSTRAP_TTL_MS): boolean {
+  return _isFresh(ONBOARDING_TS_KEY, ttlMs);
+}
+
 export function clearCachedOnboardingComplete(): void {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(ONBOARDING_DONE_KEY);
+  sessionStorage.removeItem(ONBOARDING_TS_KEY);
 }
 
 export function getActiveDoctorId(): string | null {
@@ -46,6 +66,7 @@ export function clearActiveDoctorId(): void {
 
 export function cacheClinicContext(ctx: ClinicUxContext): void {
   sessionStorage.setItem(CLINIC_CTX_KEY, JSON.stringify(ctx));
+  sessionStorage.setItem(CLINIC_CTX_TS_KEY, String(Date.now()));
 }
 
 export function getCachedClinicContext(): ClinicUxContext | null {
@@ -58,8 +79,13 @@ export function getCachedClinicContext(): ClinicUxContext | null {
   }
 }
 
+export function isClinicContextFresh(ttlMs: number = BOOTSTRAP_TTL_MS): boolean {
+  return _isFresh(CLINIC_CTX_TS_KEY, ttlMs);
+}
+
 export function clearCachedClinicContext(): void {
   sessionStorage.removeItem(CLINIC_CTX_KEY);
+  sessionStorage.removeItem(CLINIC_CTX_TS_KEY);
 }
 
 export function usesClinicDashboard(ctx: ClinicUxContext): boolean {

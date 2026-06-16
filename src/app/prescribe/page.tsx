@@ -43,6 +43,8 @@ import { PinApproveModal, DoctorCard } from "@/components/ClinicSessionUI";
 import {
   cacheClinicContext,
   getActiveDoctorId,
+  getCachedClinicContext,
+  isClinicContextFresh,
   setActiveDoctorId,
 } from "@/lib/clinic-session";
 
@@ -178,8 +180,14 @@ function PrescribeFlow() {
     (async () => {
       try {
         // Token is already ensured by the guards (and authFetch self-heals on
-        // 401), so skip the extra exchange and fetch profile + context together.
-        const [profile, ctx] = await Promise.all([getMe(), getClinicUxContext()]);
+        // 401). Reuse the cached clinic context when fresh to avoid a duplicate
+        // /auth/context call the guard already made; only getMe is required.
+        const cachedCtx = getCachedClinicContext();
+        const ctxPromise =
+          cachedCtx && isClinicContextFresh()
+            ? Promise.resolve(cachedCtx)
+            : getClinicUxContext();
+        const [profile, ctx] = await Promise.all([getMe(), ctxPromise]);
         setDoctor(profile);
         cacheClinicContext(ctx);
         setClinicCtx(ctx);

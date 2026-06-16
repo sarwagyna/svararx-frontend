@@ -7,6 +7,7 @@ import type { ClinicUxContext } from "@/lib/api";
 import {
   cacheClinicContext,
   getCachedClinicContext,
+  isClinicContextFresh,
   isDoctorSessionActive,
   usesClinicDashboard,
 } from "@/lib/clinic-session";
@@ -36,6 +37,10 @@ export function DoctorSessionGuard({ children }: { children: React.ReactNode }) 
     const cached = getCachedClinicContext();
     if (cached && evaluate(cached)) {
       setReady(true);
+      // Recently fetched — skip revalidation to avoid a call on every nav.
+      if (isClinicContextFresh()) {
+        return;
+      }
     }
 
     (async () => {

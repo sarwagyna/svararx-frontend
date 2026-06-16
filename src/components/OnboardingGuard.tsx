@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ensureToken, getOnboardingStatus } from "@/lib/api";
-import { cacheOnboardingComplete, getCachedOnboardingComplete } from "@/lib/clinic-session";
+import {
+  cacheOnboardingComplete,
+  getCachedOnboardingComplete,
+  isOnboardingStatusFresh,
+} from "@/lib/clinic-session";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -22,6 +26,10 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
     if (getCachedOnboardingComplete() === true) {
       setReady(true);
+      // Recently verified complete — skip the network call entirely.
+      if (isOnboardingStatusFresh()) {
+        return;
+      }
     }
 
     (async () => {
