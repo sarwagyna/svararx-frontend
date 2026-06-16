@@ -28,6 +28,18 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   poweredByHeader: false,
+  experimental: {
+    // Tree-shake barrel imports from heavy libraries so each page compiles
+    // far fewer modules (faster dev compiles + smaller production bundles).
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "@radix-ui/react-label",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-switch",
+    ],
+  },
   async rewrites() {
     return [
       {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { exchangeToken, getOnboardingStatus } from "@/lib/api";
+import { ensureToken, getOnboardingStatus } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -22,7 +22,7 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        await exchangeToken();
+        await ensureToken();
         const status = await getOnboardingStatus();
         if (!status.completed) {
           router.replace("/onboarding");

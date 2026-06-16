@@ -889,15 +889,36 @@ async function authFetch(url: string, init: RequestInit = {}): Promise<Response>
 
 // ─── Auth endpoints ───────────────────────────────────────────
 
+// Coalesce concurrent token exchanges so guards/components mounting together
+// don't each fire a separate POST /auth/token round-trip.
+let exchangeInFlight: Promise<TokenPair> | null = null;
+
 export async function exchangeToken(): Promise<TokenPair> {
-  const headers = await getSupabaseAuthHeader();
-  const res = await fetch(`${BASE}/auth/token`, {
-    method: "POST",
-    headers,
-  });
-  const tokens = await handleResponse<TokenPair>(res);
-  storeTokens(tokens.access_token, tokens.refresh_token);
-  return tokens;
+  if (exchangeInFlight) return exchangeInFlight;
+  exchangeInFlight = (async () => {
+    const headers = await getSupabaseAuthHeader();
+    const res = await fetch(`${BASE}/auth/token`, {
+      method: "POST",
+      headers,
+    });
+    const tokens = await handleResponse<TokenPair>(res);
+    storeTokens(tokens.access_token, tokens.refresh_token);
+    return tokens;
+  })();
+  try {
+    return await exchangeInFlight;
+  } finally {
+    exchangeInFlight = null;
+  }
+}
+
+/**
+ * Ensure a SvaraRx access token exists without forcing a network round-trip
+ * when one is already cached. authFetch still handles 401 refresh on its own.
+ */
+export async function ensureToken(): Promise<void> {
+  if (getStoredAccessToken()) return;
+  await exchangeToken();
 }
 
 export async function getMe(): Promise<DoctorProfile> {

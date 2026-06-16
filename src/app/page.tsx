@@ -8,7 +8,7 @@ import { PageContent } from "@/components/PageContent";
 import { OnboardingGuard } from "@/components/OnboardingGuard";
 import { DoctorSessionGuard } from "@/components/DoctorSessionGuard";
 import { DashboardAnalyticsPanel } from "@/components/DashboardAnalytics";
-import { getDashboard, getMe, exchangeToken, prescriptionLink, type DashboardData, type RecentPrescription } from "@/lib/api";
+import { getDashboard, getMe, prescriptionLink, type DashboardData, type RecentPrescription } from "@/lib/api";
 import { getActiveDoctorId } from "@/lib/clinic-session";
 
 function greeting() {
@@ -134,8 +134,10 @@ function DashboardContent() {
 
   useEffect(() => {
     setSessionDoctorId(getActiveDoctorId());
-    exchangeToken()
-      .then(() => getMe())
+    // A valid token is already guaranteed by OnboardingGuard, and authFetch
+    // self-heals on 401 — so skip the extra exchangeToken round-trip and let
+    // these two calls run in parallel.
+    getMe()
       .then((profile) => setDoctorName(profile.name))
       .catch(() => {});
 
