@@ -10,12 +10,20 @@ import {
   storeTokens,
 } from "./tokens";
 
+function resolveServerApiBase(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!raw) return "/api/v1";
+
+  let origin = raw.replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(origin)) {
+    const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
+    origin = `${isLocal ? "http" : "https"}://${origin}`;
+  }
+  return `${origin}/api/v1`;
+}
+
 const BASE =
-  typeof window !== "undefined"
-    ? "/api/v1"
-    : process.env.NEXT_PUBLIC_API_URL
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
-      : "/api/v1";
+  typeof window !== "undefined" ? "/api/v1" : resolveServerApiBase();
 
 // ─── Types ────────────────────────────────────────────────────
 
