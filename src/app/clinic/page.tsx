@@ -40,7 +40,12 @@ function ClinicDashboardContent() {
 
   const load = useCallback(async () => {
     await exchangeToken();
-    const context = await getClinicUxContext();
+    // Context decides routing; dashboard is only used if we stay — fetch both
+    // in parallel and discard the dashboard result on redirect.
+    const [context, dashboard] = await Promise.all([
+      getClinicUxContext(),
+      getDashboard().catch(() => null),
+    ]);
     cacheClinicContext(context);
 
     if (!usesClinicDashboard(context)) {
@@ -53,8 +58,7 @@ function ClinicDashboardContent() {
     }
 
     setCtx(context);
-    const dashboard = await getDashboard();
-    setData(dashboard);
+    setData(dashboard ?? (await getDashboard()));
   }, [router]);
 
   useEffect(() => {

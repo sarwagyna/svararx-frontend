@@ -2,7 +2,7 @@
  * Post-login routing — tier-aware: solo doctors land on prescribe with zero extra steps.
  */
 import { getClinicUxContext, getOnboardingStatus, exchangeToken } from "./api";
-import { cacheClinicContext, isDoctorSessionActive, resolveEntryPath, setActiveDoctorId, usesClinicDashboard } from "./clinic-session";
+import { cacheClinicContext, cacheOnboardingComplete, isDoctorSessionActive, resolveEntryPath, setActiveDoctorId, usesClinicDashboard } from "./clinic-session";
 
 export async function ensureApiSession(): Promise<void> {
   await exchangeToken();
@@ -11,12 +11,17 @@ export async function ensureApiSession(): Promise<void> {
 export async function resolvePostLoginPath(next?: string | null): Promise<string> {
   await ensureApiSession();
   try {
-    const status = await getOnboardingStatus();
+    // Onboarding status and clinic context are independent — fetch together.
+    const [status, ctxResult] = await Promise.all([
+      getOnboardingStatus(),
+      getClinicUxContext().catch(() => null),
+    ]);
+    cacheOnboardingComplete(status.completed);
     if (!status.completed) {
       return "/onboarding";
     }
 
-    const ctx = await getClinicUxContext();
+    const ctx = ctxResult ?? (await getClinicUxContext());
     cacheClinicContext(ctx);
 
     if (ctx.is_solo && !usesClinicDashboard(ctx) && ctx.doctors[0]) {

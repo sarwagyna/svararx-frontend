@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { AppShell } from "@/components/AppShell";
 import { PageContent } from "@/components/PageContent";
 import { OnboardingGuard } from "@/components/OnboardingGuard";
 import { DoctorSessionGuard } from "@/components/DoctorSessionGuard";
-import { DashboardAnalyticsPanel } from "@/components/DashboardAnalytics";
+
+// recharts is heavy — load it only on the client after the dashboard shell paints.
+const DashboardAnalyticsPanel = dynamic(
+  () => import("@/components/DashboardAnalytics").then((m) => m.DashboardAnalyticsPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 rounded-2xl bg-canvas-soft animate-pulse" aria-hidden />
+    ),
+  }
+);
 import { getDashboard, getMe, prescriptionLink, type DashboardData, type RecentPrescription } from "@/lib/api";
 import { getActiveDoctorId } from "@/lib/clinic-session";
 

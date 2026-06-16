@@ -3,6 +3,7 @@
  * /prescribe — Main prescription flow page.
  */
 import { useState, useCallback, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
@@ -11,7 +12,10 @@ import { PatientQuickSelect, type PatientQuickSelectHandle } from "@/components/
 import { ChiefComplaintStep } from "@/components/ChiefComplaintStep";
 import { ReviewScreen } from "@/components/ReviewScreen";
 import { VitalsQuickEntry } from "@/components/VitalsQuickEntry";
-import { VitalsSparkline } from "@/components/VitalsSparkline";
+const VitalsSparkline = dynamic(
+  () => import("@/components/VitalsSparkline").then((m) => m.VitalsSparkline),
+  { ssr: false, loading: () => <div className="h-24 rounded-xl bg-canvas-soft animate-pulse" aria-hidden /> }
+);
 import { AppShell } from "@/components/AppShell";
 import { PageContent } from "@/components/PageContent";
 import { OnboardingGuard } from "@/components/OnboardingGuard";
@@ -22,7 +26,6 @@ import {
   transcribeAndStructure,
   structureTranscription,
   approvePrescription,
-  exchangeToken,
   getMe,
   getClinicUxContext,
   getPatient,
@@ -174,11 +177,10 @@ function PrescribeFlow() {
   useEffect(() => {
     (async () => {
       try {
-        await exchangeToken();
-        const profile = await getMe();
+        // Token is already ensured by the guards (and authFetch self-heals on
+        // 401), so skip the extra exchange and fetch profile + context together.
+        const [profile, ctx] = await Promise.all([getMe(), getClinicUxContext()]);
         setDoctor(profile);
-
-        const ctx = await getClinicUxContext();
         cacheClinicContext(ctx);
         setClinicCtx(ctx);
 

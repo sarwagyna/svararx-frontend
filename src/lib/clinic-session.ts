@@ -13,6 +13,23 @@ const CLINIC_CTX_KEY = "svararx_clinic_ux_context";
 const DOCTOR_SESSION_KEY = "svararx_doctor_session";
 const CLINIC_ACCESS_KEY = "svararx_clinic_access_token";
 const CLINIC_REFRESH_KEY = "svararx_clinic_refresh_token";
+const ONBOARDING_DONE_KEY = "svararx_onboarding_complete";
+
+export function cacheOnboardingComplete(done: boolean): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(ONBOARDING_DONE_KEY, done ? "1" : "0");
+}
+
+export function getCachedOnboardingComplete(): boolean | null {
+  if (typeof window === "undefined") return null;
+  const v = sessionStorage.getItem(ONBOARDING_DONE_KEY);
+  return v === null ? null : v === "1";
+}
+
+export function clearCachedOnboardingComplete(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(ONBOARDING_DONE_KEY);
+}
 
 export function getActiveDoctorId(): string | null {
   if (typeof window === "undefined") return null;
@@ -92,6 +109,7 @@ export function clearDoctorSession(): void {
 export function clearClinicSessionState(): void {
   clearDoctorSession();
   clearCachedClinicContext();
+  clearCachedOnboardingComplete();
 }
 
 export function resolveEntryPath(ctx: ClinicUxContext): string {
