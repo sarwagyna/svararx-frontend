@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --green: #9fe870;
+  --green-hover: #cdffad;
+  --green-pale: #e2f6d5;
+  --canvas: #ffffff;
+  --canvas-soft: #e8ebe6;
+  --ink: #0e0f0c;
+  --body: #454745;
+  --mute: #868685;
+  --positive: #2ead4b;
+  --positive-deep: #054d28;
+  --warning: #ffd11a;
+  --warning-content: #4a3b1c;
+  --negative: #d03238;
+
+  /* shadcn/ui tokens mapped to SvaraRx theme */
+  --background: 0 0% 100%;
+  --foreground: 60 6% 6%;
+  --card: 0 0% 100%;
+  --card-foreground: 60 6% 6%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 60 6% 6%;
+  --primary: 142 76% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 90 14% 92%;
+  --secondary-foreground: 60 6% 6%;
+  --muted: 90 14% 92%;
+  --muted-foreground: 60 2% 46%;
+  --accent: 96 62% 89%;
+  --accent-foreground: 60 6% 6%;
+  --destructive: 358 65% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 60 6% 90%;
+  --input: 60 6% 90%;
+  --ring: 142 76% 36%;
+  --radius: 0.75rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+/* Waveform bars */
+.waveform-bar {
+  width: 4px;
+  background: var(--green);
+  border-radius: 2px;
+  animation: wave 1.2s ease-in-out infinite;
+}
+.waveform-bar:nth-child(1) { animation-delay: 0s; height: 12px; }
+.waveform-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+.waveform-bar:nth-child(3) { animation-delay: 0.2s; height: 28px; }
+.waveform-bar:nth-child(4) { animation-delay: 0.3s; height: 32px; }
+.waveform-bar:nth-child(5) { animation-delay: 0.4s; height: 24px; }
+.waveform-bar:nth-child(6) { animation-delay: 0.5s; height: 16px; }
+.waveform-bar:nth-child(7) { animation-delay: 0.3s; height: 28px; }
+.waveform-bar:nth-child(8) { animation-delay: 0.1s; height: 12px; }
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* Print styles */
+@media print {
+  body * { visibility: hidden; }
+  #print-frame, #print-frame * { visibility: visible; }
+  #print-frame { position: absolute; left: 0; top: 0; width: 100%; }
+}
