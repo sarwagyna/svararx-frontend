@@ -19,6 +19,8 @@ import {
 import {
   cacheClinicContext,
   exitDoctorSession,
+  getCachedClinicContext,
+  isClinicContextFresh,
   isDoctorSessionActive,
   usesClinicDashboard,
 } from "@/lib/clinic-session";
@@ -40,10 +42,15 @@ function ClinicDashboardContent() {
 
   const load = useCallback(async () => {
     await exchangeToken();
-    // Context decides routing; dashboard is only used if we stay — fetch both
-    // in parallel and discard the dashboard result on redirect.
+    // Reuse the cached clinic context when fresh (the guard already fetched it);
+    // dashboard is only used if we stay — fetch in parallel, discard on redirect.
+    const cachedCtx = getCachedClinicContext();
+    const ctxPromise =
+      cachedCtx && isClinicContextFresh()
+        ? Promise.resolve(cachedCtx)
+        : getClinicUxContext();
     const [context, dashboard] = await Promise.all([
-      getClinicUxContext(),
+      ctxPromise,
       getDashboard().catch(() => null),
     ]);
     cacheClinicContext(context);
